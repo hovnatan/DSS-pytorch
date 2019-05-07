@@ -50,6 +50,7 @@ class ConcatLayer(nn.Module):
         elem_x = [x]
         for i, elem in enumerate(list_x):
             elem_x.append(self.upconv[i](elem))
+        raise
         if self.scale:
             out = self.deconv(self.conv(torch.cat(elem_x, dim=1)))
         else:
