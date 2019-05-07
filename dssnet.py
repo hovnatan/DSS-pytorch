@@ -9,6 +9,14 @@ extra = {'dss': [(64, 128, 3, [8, 16, 32, 64]), (128, 128, 3, [4, 8, 16, 32]), (
                  (512, 256, 5, [4, 8]), (512, 512, 5, []), (512, 512, 7, [])]}
 connect = {'dss': [[2, 3, 4, 5], [2, 3, 4, 5], [4, 5], [4, 5], [], []]}
 
+import traceback
+import sys
+def pdb_excepthook(exc_type, exc_val, exc_tb):
+    traceback.print_tb(exc_tb, limit=100)
+    __import__("ipdb").post_mortem(exc_tb)
+
+sys.excepthook = pdb_excepthook
+
 
 # vgg16
 def vgg(cfg, i=3, batch_norm=False):
@@ -104,7 +112,7 @@ class DSS(nn.Module):
         self.v2 = v2
         if v2: self.fuse = FusionLayer()
 
-    def forward(self, x, label=None):
+    def forward(self, x):
         prob, back, y, num = list(), list(), list(), 0
         for k in range(len(self.base)):
             x = self.base[k](x)
@@ -113,7 +121,7 @@ class DSS(nn.Module):
                 num += 1
         # side output
         y.append(self.feat[num](self.pool(x)))
-        for i, k in enumerate(range(len(y))):
+        for i in range(len(y)):
             back.append(self.comb[i](y[i], [y[j] for j in self.connect[i]]))
         # fusion map
         if self.v2:
@@ -147,11 +155,7 @@ def weights_init(m):
 
 if __name__ == '__main__':
     net = build_model()
-    img = torch.randn(1, 3, 64, 64)
-    net = net.to(torch.device('cuda:0'))
-    img = img.to(torch.device('cuda:0'))
+    img = torch.randn(2, 3, 64, 64)
     out = net(img)
-    k = [out[x] for x in [1, 2, 3, 6]]
-    print(len(k))
     # for param in net.parameters():
     #     print(param)
