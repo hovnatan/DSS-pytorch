@@ -2,13 +2,6 @@ import torch
 from torch import nn
 from torch.nn import init
 
-# vgg choice
-base = {'dss': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M']}
-# extend vgg choice --- follow the paper, you can change it
-extra = {'dss': [(64, 128, 3, [8, 16, 32, 64]), (128, 128, 3, [4, 8, 16, 32]), (256, 256, 5, [8, 16]),
-                 (512, 256, 5, [4, 8]), (512, 512, 5, []), (512, 512, 7, [])]}
-connect = {'dss': [[2, 3, 4, 5], [2, 3, 4, 5], [4, 5], [4, 5], [], []]}
-
 import traceback
 import sys
 def pdb_excepthook(exc_type, exc_val, exc_tb):
@@ -17,6 +10,30 @@ def pdb_excepthook(exc_type, exc_val, exc_tb):
 
 sys.excepthook = pdb_excepthook
 
+from torch.utils.tensorboard import SummaryWriter
+
+writer = SummaryWriter()
+
+base = {'dss': [64, 64,
+                'M', 128, 128,
+                'M', 256, 256, 256,
+                'M', 512, 512, 512,
+                'M', 512, 512, 512,
+                'M'
+                ]}
+extra = {'dss': [(64, 128, 3, [8, 16, 32, 64]),
+                 (128, 128, 3, [4, 8, 16, 32]),
+                 (256, 256, 5, [8, 16]),
+                 (512, 256, 5, [4, 8]),
+                 (512, 512, 5, []),
+                 (512, 512, 7, [])
+                 ] }
+connect = {'dss': [[2, 3, 4, 5], [2, 3, 4, 5],
+                   [4, 5],
+                   [4, 5],
+                   [],
+                   []
+                   ] }
 
 # vgg16
 def vgg(cfg, i=3, batch_norm=False):
@@ -62,8 +79,10 @@ class ConcatLayer(nn.Module):
 class FeatLayer(nn.Module):
     def __init__(self, in_channel, channel, k):
         super(FeatLayer, self).__init__()
-        self.main = nn.Sequential(nn.Conv2d(in_channel, channel, k, 1, k // 2), nn.ReLU(inplace=True),
-                                  nn.Conv2d(channel, channel, k, 1, k // 2), nn.ReLU(inplace=True),
+        self.main = nn.Sequential(nn.Conv2d(in_channel, channel, k, 1, k // 2),
+                                  nn.ReLU(inplace=True),
+                                  nn.Conv2d(channel, channel, k, 1, k // 2),
+                                  nn.ReLU(inplace=True),
                                   nn.Conv2d(channel, 1, 1, 1))
 
     def forward(self, x):
@@ -102,27 +121,45 @@ def extra_layer(vgg, cfg):
 # DSS network
 # Note: if you use other backbone network, please change extract
 class DSS(nn.Module):
-    def __init__(self, base, feat_layers, concat_layers, connect, extract=[3, 8, 15, 22, 29], v2=True):
+    def __init__(self, base, feat_layers, concat_layers, connect,
+                 extract=(3, 8, 15, 22, 29), v2=True):
         super(DSS, self).__init__()
         self.extract = extract
         self.connect = connect
         self.base = nn.ModuleList(base)
+        for ind, m in enumerate(self.base):
+            setattr(self, f"vgg{ind}", m)
         self.feat = nn.ModuleList(feat_layers)
+        for ind, m in enumerate(self.feat):
+            setattr(self, f"feat{ind}", m)
         self.comb = nn.ModuleList(concat_layers)
+        for ind, m in enumerate(self.comb):
+            setattr(self, f"concat{ind}", m)
         self.pool = nn.AvgPool2d(3, 1, 1)
         self.v2 = v2
-        if v2: self.fuse = FusionLayer()
+        if v2:
+            self.fuse = FusionLayer()
 
     def forward(self, x):
+<<<<<<< f0ae7df4f99b61eb49e31ed0bca63885f8b4d06c
         prob, back, y, num = list(), list(), list(), 0
         for k in range(len(self.base)):
+=======
+        back, y, num = list(), list(), 0
+        for k, _ in enumerate(self.base):
+>>>>>>> Code cleanup
             x = self.base[k](x)
             if k in self.extract:
                 y.append(self.feat[num](x))
                 num += 1
         # side output
         y.append(self.feat[num](self.pool(x)))
+<<<<<<< f0ae7df4f99b61eb49e31ed0bca63885f8b4d06c
         for i in range(len(y)):
+=======
+        raise
+        for i, _ in enumerate(y):
+>>>>>>> Code cleanup
             back.append(self.comb[i](y[i], [y[j] for j in self.connect[i]]))
         # fusion map
         if self.v2:
@@ -132,7 +169,9 @@ class DSS(nn.Module):
             # version1: mean fusion
             back.append(torch.cat(back, dim=1).mean(dim=1, keepdim=True))
         # add sigmoid
-        for i in back: prob.append(torch.sigmoid(i))
+        prob = []
+        for i in back:
+            prob.append(torch.sigmoid(i))
         return prob
 
 
@@ -158,5 +197,12 @@ if __name__ == '__main__':
     net = build_model()
     img = torch.randn(2, 3, 64, 64)
     out = net(img)
+<<<<<<< f0ae7df4f99b61eb49e31ed0bca63885f8b4d06c
+=======
+    for o in out:
+        print(o.shape)
+>>>>>>> Code cleanup
     # for param in net.parameters():
     #     print(param)
+    writer.add_graph(net, img, verbose=False)
+    writer.close()
