@@ -1,16 +1,17 @@
+import sys
+import traceback
+
 import torch
 from torch import nn
 from torch.nn import init
 
-import traceback
-import sys
+from torch.utils.tensorboard import SummaryWriter
+
 def pdb_excepthook(exc_type, exc_val, exc_tb):
     traceback.print_tb(exc_tb, limit=100)
     __import__("ipdb").post_mortem(exc_tb)
 
 sys.excepthook = pdb_excepthook
-
-from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter()
 
@@ -27,13 +28,13 @@ extra = {'dss': [(64, 128, 3, [8, 16, 32, 64]),
                  (512, 256, 5, [4, 8]),
                  (512, 512, 5, []),
                  (512, 512, 7, [])
-                 ] }
+                 ]}
 connect = {'dss': [[2, 3, 4, 5], [2, 3, 4, 5],
                    [4, 5],
                    [4, 5],
                    [],
                    []
-                   ] }
+                   ]}
 
 # vgg16
 def vgg(cfg, i=3, batch_norm=False):
@@ -67,7 +68,6 @@ class ConcatLayer(nn.Module):
         elem_x = [x]
         for i, elem in enumerate(list_x):
             elem_x.append(self.upconv[i](elem))
-        raise
         if self.scale:
             out = self.deconv(self.conv(torch.cat(elem_x, dim=1)))
         else:
@@ -149,7 +149,6 @@ class DSS(nn.Module):
                 num += 1
         # side output
         y.append(self.feat[num](self.pool(x)))
-        raise
         for i, _ in enumerate(y):
             back.append(self.comb[i](y[i], [y[j] for j in self.connect[i]]))
         # fusion map
@@ -160,10 +159,7 @@ class DSS(nn.Module):
             # version1: mean fusion
             back.append(torch.cat(back, dim=1).mean(dim=1, keepdim=True))
         # add sigmoid
-        prob = []
-        for i in back:
-            prob.append(torch.sigmoid(i))
-        return prob
+        return [torch.sigmoid(i) for i in back]
 
 
 # build the whole network
