@@ -141,25 +141,16 @@ class DSS(nn.Module):
             self.fuse = FusionLayer()
 
     def forward(self, x):
-<<<<<<< f0ae7df4f99b61eb49e31ed0bca63885f8b4d06c
-        prob, back, y, num = list(), list(), list(), 0
-        for k in range(len(self.base)):
-=======
         back, y, num = list(), list(), 0
         for k, _ in enumerate(self.base):
->>>>>>> Code cleanup
             x = self.base[k](x)
             if k in self.extract:
                 y.append(self.feat[num](x))
                 num += 1
         # side output
         y.append(self.feat[num](self.pool(x)))
-<<<<<<< f0ae7df4f99b61eb49e31ed0bca63885f8b4d06c
-        for i in range(len(y)):
-=======
         raise
         for i, _ in enumerate(y):
->>>>>>> Code cleanup
             back.append(self.comb[i](y[i], [y[j] for j in self.connect[i]]))
         # fusion map
         if self.v2:
@@ -197,11 +188,8 @@ if __name__ == '__main__':
     net = build_model()
     img = torch.randn(2, 3, 64, 64)
     out = net(img)
-<<<<<<< f0ae7df4f99b61eb49e31ed0bca63885f8b4d06c
-=======
     for o in out:
         print(o.shape)
->>>>>>> Code cleanup
     # for param in net.parameters():
     #     print(param)
     writer.add_graph(net, img, verbose=False)
