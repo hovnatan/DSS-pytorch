@@ -1,6 +1,7 @@
 import math
-import torch
 from collections import OrderedDict
+
+import torch
 from torch.nn import utils, functional as F
 from torch.optim import Adam
 from torch.backends import cudnn
@@ -10,7 +11,7 @@ from loss import Loss
 from tools.visual import Viz_visdom
 
 
-class Solver(object):
+class Solver():
     def __init__(self, train_loader, val_loader, test_dataset, config):
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -28,7 +29,8 @@ class Solver(object):
         if config.visdom:
             self.visual = Viz_visdom("DSS", 1)
         self.build_model()
-        if self.config.pre_trained: self.net.load_state_dict(torch.load(self.config.pre_trained))
+        if self.config.pre_trained:
+            self.net.load_state_dict(torch.load(self.config.pre_trained))
         if config.mode == 'train':
             self.log_output = open("%s/logs/log.txt" % config.save_fold, 'w')
         else:
@@ -53,11 +55,14 @@ class Solver(object):
     # build the network
     def build_model(self):
         self.net = build_model().to(self.device)
-        if self.config.mode == 'train': self.loss = Loss().to(self.device)
+        if self.config.mode == 'train':
+            self.loss = Loss().to(self.device)
         self.net.train()
         self.net.apply(weights_init)
-        if self.config.load == '': self.net.base.load_state_dict(torch.load(self.config.vgg))
-        if self.config.load != '': self.net.load_state_dict(torch.load(self.config.load))
+        if self.config.load == '':
+            self.net.base.load_state_dict(torch.load(self.config.vgg))
+        if self.config.load != '':
+            self.net.load_state_dict(torch.load(self.config.load))
         self.optimizer = Adam(self.net.parameters(), self.config.lr)
         self.print_network(self.net, 'DSS')
 

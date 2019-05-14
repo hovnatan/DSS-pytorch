@@ -91,5 +91,6 @@ if __name__ == '__main__':
     parser.add_argument('--visdom', type=bool, default=False)
 
     config = parser.parse_args()
-    if not os.path.exists(config.save_fold): os.mkdir(config.save_fold)
+    if not os.path.exists(config.save_fold):
+        os.mkdir(config.save_fold)
     main(config)
