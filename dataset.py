@@ -89,28 +89,39 @@ def get_loader(img_root, label_root, img_size, batch_size,
         dataset = ImageData(img_root, label_root, None, t_transform, filename=filename)
         return dataset
 
-def get_loader_hk(img_root, img_size, batch_size,
-                 mode='train', num_thread=4, pin=True):
-    if mode == 'train':
-        transform = transforms.Compose([
-            transforms.Resize((img_size, img_size)),
-            transforms.ToTensor()
-            #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
-        t_transform = transforms.Compose([
-            transforms.Resize((img_size, img_size)),
-            transforms.ToTensor(),
-            transforms.Lambda(lambda x: torch.round(x))  # TODO: it maybe unnecessary
-        ])
-        random.seed(1001)
-        files = glob.glob(os.path.join(img_root, '*.jpg'))
-        train_size = int(0.8 * len(files))
-        # test_size = len(files) - train_size
-        random.shuffle(files)
-        dataset = ImageData_hk(files[:train_size], transform, t_transform)
-        data_loader = data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_thread,
-                                      pin_memory=pin)
-        return data_loader
+
+def get_loaders_hk(img_root, img_size, batch_size, num_thread=4, pin=True):
+    transform = transforms.Compose([
+        transforms.Resize((img_size, img_size)),
+        transforms.ToTensor()
+        #transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+    t_transform = transforms.Compose([
+        transforms.Resize((img_size, img_size)),
+        transforms.ToTensor(),
+        # TODO: it maybe unnecessary
+        transforms.Lambda(lambda x: torch.round(x))
+    ])
+    random.seed(1001)
+    files = glob.glob(os.path.join(img_root, '*.jpg'))
+    train_size = int(0.8 * len(files))
+    # test_size = len(files) - train_size
+    random.shuffle(files)
+    train_dataset = ImageData_hk(files[:train_size], transform, t_transform)
+    train_data_loader = data.DataLoader(
+        dataset=train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_thread,
+        pin_memory=pin)
+    val_dataset = ImageData_hk(files[train_size:], transform, t_transform)
+    val_data_loader = data.DataLoader(
+        dataset=val_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_thread,
+        pin_memory=pin)
+    return train_data_loader, val_data_loader
 
 
 if __name__ == '__main__':
