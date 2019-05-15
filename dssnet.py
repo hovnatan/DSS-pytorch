@@ -8,7 +8,7 @@ from torch.nn import init
 from torch.utils.tensorboard import SummaryWriter
 
 def pdb_excepthook(exc_type, exc_val, exc_tb):
-    traceback.print_tb(exc_tb, limit=100)
+    traceback.print_exception(exc_type, exc_val, exc_tb)
     __import__("ipdb").post_mortem(exc_tb)
 
 sys.excepthook = pdb_excepthook

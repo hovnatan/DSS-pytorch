@@ -8,19 +8,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
-from PIL import Image
 from torch import optim
 from torch.utils.data import DataLoader, Dataset
+from PIL import Image
 import torchvision
 import dataset
 import dssnet
-
-from albumentations import (ToFloat,
-    CLAHE, RandomRotate90, Transpose, ShiftScaleRotate, Blur, OpticalDistortion,
-    GridDistortion, HueSaturationValue, IAAAdditiveGaussianNoise, GaussNoise, MotionBlur,
-    MedianBlur, IAAPiecewiseAffine, IAASharpen, IAAEmboss, RandomContrast, RandomBrightness,
-    Flip, OneOf, Compose, Resize)
-from albumentations.pytorch import ToTensor
+from loss import Loss
+import albumentations
 
 # from IPython.core import ultratb
 # sys.excepthook = ultratb.FormattedTB(mode='Verbose',
@@ -28,20 +23,17 @@ from albumentations.pytorch import ToTensor
 
 IS_CUDA = True
 
-def fit(epoch, model, data_loader, phase='training', optimizer=None):
+
+def fit(model, data_loader, phase='training', criterion=None,
+        optimizer=None):
     if phase == 'training':
         model.train()
     elif phase == 'validation':
         model.eval()
     running_loss = 0.0
-    running_correct = 0
-    # print("Len dataset", len(data_loader.dataset))
-    # print("Model", model)
-    # for param in model.classifier.parameters():
-    #     print(param.requires_grad)
-    # raise SystemExit
+    running_num = 0
 
-    for batch_idx, (data, target) in enumerate(data_loader):
+    for (data, target) in data_loader:
         if IS_CUDA:
             data, target = data.cuda(), target.cuda()
         if phase == 'training':
@@ -50,9 +42,7 @@ def fit(epoch, model, data_loader, phase='training', optimizer=None):
         # print(model.classifier)
         # print(output.shape)
         loss = criterion(output, target)
-        if math.isnan(loss.item()) or math.isinf(loss.item()):
-            raise
-        #print("Loss", loss)
+        print(loss.item())
         running_loss += loss.item()
         preds = output.data.max(dim=1, keepdim=True)[1]
         current_correct = preds.eq(target.data.view_as(preds)).cpu().sum()
@@ -78,19 +68,28 @@ def main():
 
     vgg.classifier[6] = torch.nn.Linear(4096, 2)
     model = dssnet.build_model()
+    criterion = Loss()
 
     if IS_CUDA:
         model = model.to('cuda')
-        model = torch.nn.DataParallel(model)
+        criterion = criterion.to('cuda')
+        # model = torch.nn.DataParallel(model)
+
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
     # optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
+    img_root = '/home/hovnatan/work/MSRA-B'
+    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 1)
 
     train_losses, train_accuracy = [], []
     val_losses, val_accuracy = [], []
 
     for epoch in range(1, 10):
-        epoch_loss, epoch_accuracy = fit(epoch, model, train_loader, phase='training', optimizer=optimizer)
-        val_epoch_loss, val_epoch_accuracy = fit(epoch, model, test_loader, phase='validation')
+        epoch_loss, epoch_accuracy = fit(model, train_loader, phase='training',
+                                         criterion=criterion,
+                                         optimizer=optimizer)
+        val_epoch_loss, val_epoch_accuracy = fit(epoch, model, test_loader,
+                                                 phase='validation',
+                                                 criterion=criterion)
         train_losses.append(epoch_loss)
         train_accuracy.append(epoch_accuracy)
         val_losses.append(val_epoch_loss)
@@ -98,5 +97,5 @@ def main():
         plt.plot(range(len(train_losses)), train_losses, 'bo')
         plt.plot(range(len(val_losses)), val_losses, 'r')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

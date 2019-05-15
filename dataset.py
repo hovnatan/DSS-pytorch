@@ -91,7 +91,7 @@ def get_loader(img_root, label_root, img_size, batch_size,
         return dataset
 
 
-def get_loaders_hk(img_root: Path, img_size, batch_size, num_thread=4, pin=True):
+def get_loaders_hk(img_root, img_size, batch_size, num_thread=4, pin=True):
     transform = transforms.Compose([
         transforms.Resize((img_size, img_size)),
         transforms.ToTensor()
@@ -104,6 +104,7 @@ def get_loaders_hk(img_root: Path, img_size, batch_size, num_thread=4, pin=True)
         transforms.Lambda(lambda x: torch.round(x))
     ])
     random.seed(1001)
+    img_root = Path(img_root)
     print(f"Image root dir {img_root}")
     files = list(img_root.glob('*.jpg'))
     print(f"Full size {len(files)}")

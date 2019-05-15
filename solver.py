@@ -29,8 +29,7 @@ class Solver():
         if config.visdom:
             self.visual = Viz_visdom("DSS", 1)
         self.build_model()
-        if self.config.pre_trained:
-            self.net.load_state_dict(torch.load(self.config.pre_trained))
+        if self.config.pre_trained: self.net.load_state_dict(torch.load(self.config.pre_trained))
         if config.mode == 'train':
             self.log_output = open("%s/logs/log.txt" % config.save_fold, 'w')
         else:
