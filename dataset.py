@@ -1,5 +1,6 @@
-import os
-import glob
+from pathlib import Path
+from typing import List
+
 import random
 from PIL import Image
 import torch
@@ -7,7 +8,7 @@ from torch.utils import data
 from torchvision import transforms
 
 class ImageData_hk(data.Dataset):
-    def __init__(self, files, transform, t_transform):
+    def __init__(self, files: List[Path], transform, t_transform):
         self.files = files
         self.transform = transform
         self.t_transform = t_transform
@@ -15,9 +16,9 @@ class ImageData_hk(data.Dataset):
     def __getitem__(self, item):
         file_path = self.files[item]
         image = Image.open(file_path)
-        dir_path = os.path.dirname(file_path)
-        wo_ext = os.path.splitext(file_path)[0]
-        label_path = os.path.join(dir_path, wo_ext + '.png')
+        dir_path = file_path.parent
+        wo_ext = file_path.stem
+        label_path = (dir_path / wo_ext).with_suffix('.png')
         label = Image.open(label_path).convert('L')
         if self.transform is not None:
             image = self.transform(image)
@@ -90,7 +91,7 @@ def get_loader(img_root, label_root, img_size, batch_size,
         return dataset
 
 
-def get_loaders_hk(img_root, img_size, batch_size, num_thread=4, pin=True):
+def get_loaders_hk(img_root: Path, img_size, batch_size, num_thread=4, pin=True):
     transform = transforms.Compose([
         transforms.Resize((img_size, img_size)),
         transforms.ToTensor()
@@ -103,9 +104,12 @@ def get_loaders_hk(img_root, img_size, batch_size, num_thread=4, pin=True):
         transforms.Lambda(lambda x: torch.round(x))
     ])
     random.seed(1001)
-    files = glob.glob(os.path.join(img_root, '*.jpg'))
+    print(f"Image root dir {img_root}")
+    files = list(img_root.glob('*.jpg'))
+    print(f"Full size {len(files)}")
     train_size = int(0.8 * len(files))
     # test_size = len(files) - train_size
+    print(f"Train size {train_size}")
     random.shuffle(files)
     train_dataset = ImageData_hk(files[:train_size], transform, t_transform)
     train_data_loader = data.DataLoader(
@@ -133,8 +137,8 @@ if __name__ == '__main__':
     # for image, label in loader:
     #     print(np.array(image).shape)
     #     break
-    img_root = '/home/hovnatan/work/MSRA-B'
-    loader = get_loader_hk(img_root, 224, 1)
+    img_root = Path('/home/hovnatan/work/MSRA-B')
+    loader, _ = get_loaders_hk(img_root, 224, 1)
     for i, (image, label) in enumerate(loader):
         print(image.shape, image.dtype, torch.max(image[:, 1, :, :]))
         print(label.shape, label.dtype, torch.max(label))
