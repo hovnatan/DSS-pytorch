@@ -1,10 +1,7 @@
 import os
 import math
 import random
-import sys
-from glob import glob
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -17,14 +14,11 @@ import dssnet
 from loss import Loss
 import albumentations
 
-# from IPython.core import ultratb
-# sys.excepthook = ultratb.FormattedTB(mode='Verbose',
-#      color_scheme='Linux', call_pdb=1)
 
 IS_CUDA = True
 
 
-def fit(model, data_loader, phase='training', criterion=None,
+def fit(epoch, model, data_loader, phase='training', criterion=None,
         optimizer=None):
     if phase == 'training':
         model.train()
@@ -42,8 +36,10 @@ def fit(model, data_loader, phase='training', criterion=None,
         # print(model.classifier)
         # print(output.shape)
         loss = criterion(output, target)
-        print(loss.item())
         running_loss += loss.item()
+        prob_pred = torch.mean(torch.cat(output, dim=1), dim=1, keepdim=True)
+        mae = torch.abs(prob_pred - target).mean()
+        print(f'Epoch {epoch}, loss {loss.item()}, MAE {mae.item()}')
         # preds = output.data.max(dim=1, keepdim=True)[1]
         # current_correct = preds.eq(target.data.view_as(preds)).cpu().sum()
         # print("Current correct", current_correct)
@@ -58,7 +54,7 @@ def fit(model, data_loader, phase='training', criterion=None,
     # accuracy = torch.tensor(100.) * running_correct/len(data_loader.dataset)
     # print(f'{phase} loss is {loss:{5}.{2}} and {phase} accuracy is ' \
           # f'{running_correct}/{len(data_loader.dataset)}={accuracy.item():{10}.{4}}')
-    return loss, accuracy
+    return loss, mae
 
 def main():
     vgg = torchvision.models.vgg16(pretrained=True)
@@ -78,24 +74,24 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
     # optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
     img_root = '/home/hovnatan/work/MSRA-B'
-    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 32, 4, pin=False)
+    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 12, 4,
+                                                       pin=False)
 
     train_losses, train_accuracy = [], []
     val_losses, val_accuracy = [], []
 
     for epoch in range(1, 10):
-        epoch_loss, epoch_accuracy = fit(model, train_loader, phase='training',
+        epoch_loss, epoch_accuracy = fit(epoch, model, train_loader, phase='training',
                                          criterion=criterion,
                                          optimizer=optimizer)
-        val_epoch_loss, val_epoch_accuracy = fit(epoch, model, test_loader,
-                                                 phase='validation',
-                                                 criterion=criterion)
+        # val_epoch_loss, val_epoch_accuracy = fit(epoch, model, test_loader,
+        #                                          phase='validation',
+        #                                          criterion=criterion)
         train_losses.append(epoch_loss)
         train_accuracy.append(epoch_accuracy)
-        val_losses.append(val_epoch_loss)
-        val_accuracy.append(val_epoch_accuracy)
-        plt.plot(range(len(train_losses)), train_losses, 'bo')
-        plt.plot(range(len(val_losses)), val_losses, 'r')
+        # val_losses.append(val_epoch_loss)
+        # val_accuracy.append(val_epoch_accuracy)
+    torch.save(model.state_dict(), "~/work/DSS-pytorch/result.pth")
 
 if __name__ == '__main__':
     main()
