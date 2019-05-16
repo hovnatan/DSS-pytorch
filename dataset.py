@@ -18,7 +18,8 @@ class ImageData_hk(data.Dataset):
         image = Image.open(file_path)
         dir_path = file_path.parent
         wo_ext = file_path.stem
-        label_path = (dir_path / wo_ext).with_suffix('.png')
+        label_path = (dir_path / wo_ext)
+        label_path = label_path.with_suffix(label_path.suffix + '.png')
         label = Image.open(label_path).convert('L')
         if self.transform is not None:
             image = self.transform(image)

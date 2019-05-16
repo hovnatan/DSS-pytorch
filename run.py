@@ -44,10 +44,10 @@ def fit(model, data_loader, phase='training', criterion=None,
         loss = criterion(output, target)
         print(loss.item())
         running_loss += loss.item()
-        preds = output.data.max(dim=1, keepdim=True)[1]
-        current_correct = preds.eq(target.data.view_as(preds)).cpu().sum()
+        # preds = output.data.max(dim=1, keepdim=True)[1]
+        # current_correct = preds.eq(target.data.view_as(preds)).cpu().sum()
         # print("Current correct", current_correct)
-        running_correct += current_correct
+        # running_correct += current_correct
         # print(running_correct)
         # print(target.data.view_as(preds))
         if phase == 'training':
@@ -55,9 +55,9 @@ def fit(model, data_loader, phase='training', criterion=None,
             optimizer.step()
     print(running_loss)
     loss = running_loss/len(data_loader.dataset)
-    accuracy = torch.tensor(100.) * running_correct/len(data_loader.dataset)
-    print(f'{phase} loss is {loss:{5}.{2}} and {phase} accuracy is ' \
-          f'{running_correct}/{len(data_loader.dataset)}={accuracy.item():{10}.{4}}')
+    # accuracy = torch.tensor(100.) * running_correct/len(data_loader.dataset)
+    # print(f'{phase} loss is {loss:{5}.{2}} and {phase} accuracy is ' \
+          # f'{running_correct}/{len(data_loader.dataset)}={accuracy.item():{10}.{4}}')
     return loss, accuracy
 
 def main():
@@ -78,7 +78,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0001)
     # optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
     img_root = '/home/hovnatan/work/MSRA-B'
-    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 1)
+    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 32, 4, pin=False)
 
     train_losses, train_accuracy = [], []
     val_losses, val_accuracy = [], []
