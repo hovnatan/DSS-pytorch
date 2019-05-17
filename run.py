@@ -80,7 +80,7 @@ def main(config):
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     # optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
     img_root = Path.home() / 'work/MSRA-B'
-    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 12, 4,
+    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 4, 4,
                                                        pin=False)
 
     train_losses, train_accuracy = [], []
@@ -98,7 +98,7 @@ def main(config):
         val_losses.append(val_epoch_loss)
         val_accuracy.append(val_epoch_accuracy)
         print(
-            f"Training accuracy {train_accuracy.item()}, val accuracy {val_accuracy.item()}")
+            f"Training accuracy {epoch_accuracy.item()}, val accuracy {val_epoch_accuracy.item()}")
     if config.save_model:
         torch.save(model.state_dict(), config.save_model)
 
