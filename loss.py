@@ -1,4 +1,5 @@
 from torch import nn
+import torch
 import torch.nn.functional as F
 
 
@@ -9,7 +10,7 @@ class Loss(nn.Module):
         self.weight = weight
 
     def forward(self, x_list, label):
-        loss = self.weight[0] * F.binary_cross_entropy(x_list[0], label)
-        for i, x in enumerate(x_list[1:]):
-            loss += self.weight[i + 1] * F.binary_cross_entropy(x, label)
-        return loss
+        losses = []
+        for i, x in enumerate(x_list):
+            losses.append(self.weight[i] * F.binary_cross_entropy(x, label))
+        return sum(losses)

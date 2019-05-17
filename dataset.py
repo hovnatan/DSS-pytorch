@@ -116,12 +116,14 @@ def get_loaders_hk(img_root, img_size, batch_size, num_thread=4, pin=True):
     train_dataset = ImageData_hk(files[:train_size], transform, t_transform)
     train_data_loader = data.DataLoader(
         dataset=train_dataset,
+        shuffle=True,
         batch_size=batch_size,
         num_workers=num_thread,
         pin_memory=pin)
     val_dataset = ImageData_hk(files[train_size:], transform, t_transform)
     val_data_loader = data.DataLoader(
         dataset=val_dataset,
+        shuffle=True,
         batch_size=batch_size,
         num_workers=num_thread,
         pin_memory=pin)

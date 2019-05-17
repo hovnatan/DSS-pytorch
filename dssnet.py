@@ -1,9 +1,10 @@
 import sys
 import traceback
+from collections import OrderedDict
 
 import torch
 from torch import nn
-from torch.nn import init
+import torchvision
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -50,7 +51,16 @@ def vgg(cfg, i=3, batch_norm=False):
             else:
                 layers += [conv2d, nn.ReLU(inplace=True)]
             in_channels = v
-    return layers
+
+    result = []
+    for ind, layer in enumerate(layers):
+        result.append((str(ind), layer))
+    result = nn.Sequential(OrderedDict(result))
+    return result
+
+def vgg_def():
+    vgg = torchvision.models.vgg16(pretrained=True)
+    return vgg
 
 
 # feature map before sigmoid: build the connection and deconvolution
@@ -98,7 +108,7 @@ class FusionLayer(nn.Module):
         self._reset_parameters()
 
     def _reset_parameters(self):
-        init.constant_(self.weights, 1 / self.nums)
+        nn.init.constant_(self.weights, 1 / self.nums)
 
     def forward(self, x):
         for i in range(self.nums):
@@ -126,7 +136,10 @@ class DSS(nn.Module):
         super(DSS, self).__init__()
         self.extract = extract
         self.connect = connect
-        self.base = nn.ModuleList(base)
+        basel = []
+        for l in base:
+            basel.append(l)
+        self.base = nn.ModuleList(basel)
         for ind, m in enumerate(self.base):
             setattr(self, f"vgg{ind}", m)
         self.feat = nn.ModuleList(feat_layers)
@@ -164,23 +177,26 @@ class DSS(nn.Module):
 
 # build the whole network
 def build_model():
+    return DSS(*extra_layer(vgg_def().features, extra['dss']), connect['dss'])
+
+def build_model_old():
     return DSS(*extra_layer(vgg(base['dss'], 3), extra['dss']), connect['dss'])
-
-
-# weight init
-def xavier(param):
-    init.xavier_uniform_(param)
 
 
 def weights_init(m):
     if isinstance(m, nn.Conv2d):
-        xavier(m.weight.data)
+        nn.init.xavier_uniform_(m.weight.data)
     elif isinstance(m, nn.BatchNorm2d):
-        init.constant_(m.weight, 1)
-        init.constant_(m.bias, 0)
+        nn.init.constant_(m.weight, 1)
+        nn.init.constant_(m.bias, 0)
 
 
 if __name__ == '__main__':
+    # vgg1 = vgg(base['dss'], 3)
+    # print(vgg1)
+    # vgg2 = vgg_def()
+    # print(vgg2)
+    # raise
     net = build_model()
     img = torch.randn(2, 3, 64, 64)
     out = net(img)
