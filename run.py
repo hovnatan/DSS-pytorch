@@ -80,7 +80,7 @@ def main(config):
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     # optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
     img_root = Path.home() / 'work/MSRA-B'
-    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 4, 4,
+    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 8, 4,
                                                        pin=False)
 
     train_losses, train_accuracy = [], []
@@ -94,9 +94,9 @@ def main(config):
             val_epoch_loss, val_epoch_accuracy = fit(
                 epoch, model, test_loader, criterion=criterion, phase='validation')
         train_losses.append(epoch_loss)
-        train_accuracy.append(epoch_accuracy)
+        train_accuracy.append(epoch_accuracy.item())
         val_losses.append(val_epoch_loss)
-        val_accuracy.append(val_epoch_accuracy)
+        val_accuracy.append(val_epoch_accuracy.item())
         print(
             f"Training accuracy {epoch_accuracy.item()}, val accuracy {val_epoch_accuracy.item()}")
     if config.save_model:
