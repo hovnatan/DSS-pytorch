@@ -1,10 +1,12 @@
-from torch import nn
-import torch
 import torch.nn.functional as F
+from torch import nn
 
 
-# loss function: seven probability map --- 6 scale + 1 fuse
 class Loss(nn.Module):
+    '''
+    loss function: seven probability map --- 6 scale + 1 fuse
+    '''
+
     def __init__(self, weight=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)):
         super(Loss, self).__init__()
         self.weight = weight

@@ -1,6 +1,7 @@
 import argparse
 import math
 import random
+
 from pathlib import Path
 
 import numpy as np
@@ -8,6 +9,8 @@ import torch
 import torch.nn.functional as F
 from torch import optim
 from torch.utils.data import DataLoader, Dataset
+from torch.utils.tensorboard import SummaryWriter
+
 from PIL import Image
 import torchvision
 import dataset
@@ -15,6 +18,8 @@ import dssnet
 from loss import Loss
 import albumentations
 
+
+writer = SummaryWriter()
 
 IS_CUDA = True
 
@@ -51,12 +56,13 @@ def fit(epoch, model, data_loader, phase='training', criterion=None,
         if phase == 'training':
             loss.backward()
             optimizer.step()
-    loss = running_loss/len(data_loader)
-    mae = running_mae/len(data_loader)
+    loss = running_loss / len(data_loader)
+    mae = running_mae / len(data_loader)
     # accuracy = torch.tensor(100.) * running_correct/len(data_loader.dataset)
     # print(f'{phase} loss is {loss:{5}.{2}} and {phase} accuracy is ' \
-          # f'{running_correct}/{len(data_loader.dataset)}={accuracy.item():{10}.{4}}')
+    # f'{running_correct}/{len(data_loader.dataset)}={accuracy.item():{10}.{4}}')
     return loss, mae
+
 
 def main(config):
     model = dssnet.build_model()
@@ -95,12 +101,17 @@ def main(config):
                 epoch, model, test_loader, criterion=criterion, phase='validation')
         train_losses.append(epoch_loss)
         train_accuracy.append(epoch_accuracy.item())
+        writer.add_scalar("tr_loss", epoch_loss)
+        writer.add_scalar("tr_acc", epoch_accuracy.item())
         val_losses.append(val_epoch_loss)
         val_accuracy.append(val_epoch_accuracy.item())
+        writer.add_scalar("val_loss", val_epoch_loss)
+        writer.add_scalar("val_acc", val_epoch_accuracy.item())
         print(
             f"Training accuracy {epoch_accuracy.item()}, val accuracy {val_epoch_accuracy.item()}")
     if config.save_model:
         torch.save(model.state_dict(), config.save_model)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -111,3 +122,4 @@ if __name__ == '__main__':
     parser.add_argument('--epochs_to_train', type=int, default=0)
     config = parser.parse_args()
     main(config)
+    writer.close()

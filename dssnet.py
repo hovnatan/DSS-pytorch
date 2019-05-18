@@ -2,15 +2,18 @@ import sys
 import traceback
 from collections import OrderedDict
 
+
 import torch
 from torch import nn
+from torch.utils.tensorboard import SummaryWriter
+
 import torchvision
 
-from torch.utils.tensorboard import SummaryWriter
 
 def pdb_excepthook(exc_type, exc_val, exc_tb):
     traceback.print_exception(exc_type, exc_val, exc_tb)
     __import__("ipdb").post_mortem(exc_tb)
+
 
 sys.excepthook = pdb_excepthook
 
@@ -38,6 +41,8 @@ connect = {'dss': [[2, 3, 4, 5], [2, 3, 4, 5],
                    ]}
 
 # vgg16
+
+
 def vgg(cfg, i=3, batch_norm=False):
     layers = []
     in_channels = i
@@ -58,6 +63,7 @@ def vgg(cfg, i=3, batch_norm=False):
     result = nn.Sequential(OrderedDict(result))
     return result
 
+
 def vgg_def():
     vgg = torchvision.models.vgg16(pretrained=True)
     return vgg
@@ -69,10 +75,17 @@ class ConcatLayer(nn.Module):
         super(ConcatLayer, self).__init__()
         l, up, self.scale = len(list_k), [], scale
         for i in range(l):
-            up.append(nn.ConvTranspose2d(1, 1, list_k[i], list_k[i] // 2, list_k[i] // 4))
+            up.append(
+                nn.ConvTranspose2d(
+                    1,
+                    1,
+                    list_k[i],
+                    list_k[i] // 2,
+                    list_k[i] // 4))
         self.upconv = nn.ModuleList(up)
         self.conv = nn.Conv2d(l + 1, 1, 1, 1)
-        self.deconv = nn.ConvTranspose2d(1, 1, k * 2, k, k // 2) if scale else None
+        self.deconv = nn.ConvTranspose2d(
+            1, 1, k * 2, k, k // 2) if scale else None
 
     def forward(self, x, list_x):
         elem_x = [x]
@@ -112,7 +125,8 @@ class FusionLayer(nn.Module):
 
     def forward(self, x):
         for i in range(self.nums):
-            out = self.weights[i] * x[i] if i == 0 else out + self.weights[i] * x[i]
+            out = self.weights[i] * \
+                x[i] if i == 0 else out + self.weights[i] * x[i]
         return out
 
 
@@ -178,6 +192,7 @@ class DSS(nn.Module):
 # build the whole network
 def build_model():
     return DSS(*extra_layer(vgg_def().features, extra['dss']), connect['dss'])
+
 
 def build_model_old():
     return DSS(*extra_layer(vgg(base['dss'], 3), extra['dss']), connect['dss'])
