@@ -76,41 +76,59 @@ def main(config):
                 continue
             else:
                 dssnet.weights_init(module)
-    model.train()
     criterion = Loss()
     if IS_CUDA:
         model = model.to('cuda')
         criterion = criterion.to('cuda')
         # model = torch.nn.DataParallel(model)
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
-    # optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
-    img_root = Path.home() / 'work/MSRA-B'
-    train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 8, 4,
-                                                       pin=False)
+    if config.epochs_to_train > 0:
+        optimizer = optim.Adam(model.parameters(), lr=1e-4)
+        # optimizer = optim.SGD(model.parameters(), lr=0.0001, momentum=0.5)
+        img_root = Path.home() / 'work/MSRA-B'
+        train_loader, test_loader = dataset.get_loaders_hk(img_root, 224, 8, 4,
+                                                           pin=False)
 
-    train_losses, train_accuracy = [], []
-    val_losses, val_accuracy = [], []
+        train_losses, train_accuracy = [], []
+        val_losses, val_accuracy = [], []
 
-    for epoch in range(0, config.epochs_to_train):
-        epoch_loss, epoch_accuracy = fit(epoch, model, train_loader, phase='training',
-                                         criterion=criterion,
-                                         optimizer=optimizer)
-        with torch.no_grad():
-            val_epoch_loss, val_epoch_accuracy = fit(
-                epoch, model, test_loader, criterion=criterion, phase='validation')
-        train_losses.append(epoch_loss)
-        train_accuracy.append(epoch_accuracy.item())
-        writer.add_scalar("tr_loss", epoch_loss)
-        writer.add_scalar("tr_acc", epoch_accuracy.item())
-        val_losses.append(val_epoch_loss)
-        val_accuracy.append(val_epoch_accuracy.item())
-        writer.add_scalar("val_loss", val_epoch_loss)
-        writer.add_scalar("val_acc", val_epoch_accuracy.item())
-        print(
-            f"Training accuracy {epoch_accuracy.item()}, val accuracy {val_epoch_accuracy.item()}")
-    if config.save_model:
-        torch.save(model.state_dict(), config.save_model)
+        for epoch in range(0, config.epochs_to_train):
+            epoch_loss, epoch_accuracy = fit(
+                epoch, model, train_loader, phase='training',
+                criterion=criterion, optimizer=optimizer)
+            with torch.no_grad():
+                val_epoch_loss, val_epoch_accuracy = fit(
+                    epoch, model, test_loader, criterion=criterion, phase='validation')
+            train_losses.append(epoch_loss)
+            train_accuracy.append(epoch_accuracy.item())
+            writer.add_scalar("tr_loss", epoch_loss)
+            writer.add_scalar("tr_acc", epoch_accuracy.item())
+            val_losses.append(val_epoch_loss)
+            val_accuracy.append(val_epoch_accuracy.item())
+            writer.add_scalar("val_loss", val_epoch_loss,)
+            writer.add_scalar("val_acc", val_epoch_accuracy.item())
+            print(
+                f"Training accuracy {epoch_accuracy.item()}, val accuracy {val_epoch_accuracy.item()}")
+        if config.save_model:
+            torch.save(model.state_dict(), config.save_model)
+    if config.test_input_path:
+        image = Image.open(config.test_input_path)
+        to_model = dataset.transform_to_input()(image)
+        to_model = torch.unsqueeze(to_model, 0)
+        if IS_CUDA:
+            to_model = to_model.cuda()
+        preds = model(to_model)
+        prob_pred = torch.mean(torch.cat(preds, dim=1), dim=1, keepdim=True)
+        print(image.size)
+        prob_pred = F.interpolate(
+            prob_pred,
+            size=image.size[::-1],
+            mode='bilinear',
+            align_corners=True).cpu().data
+        from tools.crf_process import crf
+        prob_pred = crf(image, prob_pred.numpy(), to_tensor=True)
+        labels = torchvision.transforms.ToPILImage()(prob_pred.squeeze())
+        labels.save(config.test_output_path)
 
 
 if __name__ == '__main__':
